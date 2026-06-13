@@ -77,5 +77,41 @@ paste it on every command.
 - Programs: slot **a** = "Rooftop Garden", slot **b** = "Program B" (the tomato
   cycle‑and‑soak schedule this repo manages).
 
+## Continuous monitoring
+
+The API keeps **no watering history**, so to answer "did it water today?" you
+have to capture the live event stream yourself. `monitor.py` connects, prints
+each watering event with a local timestamp, and auto-reconnects on drops.
+
+Run it once in the foreground:
+
+```bash
+./.venv/bin/python monitor.py
+```
+
+…or run it forever as a macOS launchd agent (survives logout/reboot, logs to
+`~/Library/Logs/bhyve-monitor.log`):
+
+```bash
+# edit USERNAME/paths first
+cp com.example.bhyve-monitor.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.example.bhyve-monitor.plist
+# stop/remove:
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.example.bhyve-monitor.plist
+```
+
+Then "did it water today?" is just:
+
+```bash
+grep "$(TZ=America/Los_Angeles date +%H | head -c0)" ~/Library/Logs/bhyve-monitor.log   # or grep the date/event
+grep watering_in_progress ~/Library/Logs/bhyve-monitor.log | tail
+```
+
+## Tests
+
+```bash
+./.venv/bin/python test_bhyve.py
+```
+
 See [`KNOWLEDGE.md`](./KNOWLEDGE.md) for the full API reference and the watering
 agronomy / decision log.

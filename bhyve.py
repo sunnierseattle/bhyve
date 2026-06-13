@@ -146,12 +146,26 @@ class BhyveClient:
             "stations": [],
         })
 
-    def watch(self, device_id: str):
-        """Yield live event dicts until the connection drops or you break."""
+    def watch(self, device_id: str, *, ping_interval: int = 20):
+        """Yield live event dicts. Orbit closes idle sockets after ~30s and
+        expects an *application-level* ping, so on each idle gap we send
+        {"event":"ping"} (and skip the "pong" replies). Stops when the
+        connection actually drops or you break out."""
         ws = self._open_ws(device_id)
+        ws.settimeout(ping_interval)
         try:
             while True:
-                yield json.loads(ws.recv())
+                try:
+                    raw = ws.recv()
+                except websocket.WebSocketTimeoutException:
+                    ws.send(json.dumps({"event": "ping"}))   # app-level keepalive
+                    continue
+                if not raw:                                  # server closed
+                    break
+                evt = json.loads(raw)
+                if evt.get("event") == "pong":               # keepalive ack
+                    continue
+                yield evt
         finally:
             ws.close()
 

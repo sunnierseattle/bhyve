@@ -76,6 +76,12 @@ Inbound event types seen: `change_mode` (echo), `watering_in_progress_notificati
   scheduled run get skipped.
 - `run_time: 1.5` (90 s) was accepted **and** held on read‑back, so this
   firmware does store sub‑minute run times. (Not guaranteed on all firmware.)
+- **WebSocket idle timeout:** the server **closes idle sockets after ~30 s** and
+  expects an **application‑level** `{"event":"ping"}` (it replies `{"event":"pong"}`),
+  **not** a WebSocket protocol ping. `watch()` sends an app ping every 20 s to
+  stay alive; long‑running monitors must also auto‑reconnect. (This bit us: a
+  monitor with only a 20 s socket read timeout died on the first quiet gap and
+  missed a scheduled run.)
 
 ---
 
